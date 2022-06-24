@@ -1,0 +1,245 @@
+create or replace PROCEDURE PRC_ALOCA_PRODUTOS(
+P_ID_PRODUTO NUMBER,
+P_QUANTIDADE_PEDIDO NUMBER,
+P_ID_CLIENTE NUMBER,
+P_DATA_AGENDA DATE,
+P_DATA_LOC DATE,
+P_DATA_DEVOLUCAO DATE
+) IS
+V_NOME_PRODUTO VARCHAR2(30);
+V_VALOR_PRODUTO NUMBER(8,2);
+V_VALOR_LOC NUMBER(8,2);
+V_NOME_CLIENTE VARCHAR(30);
+V_QUANTIDADE_ESTOQUE NUMBER(8,2);
+V_DATA_DEVOLUCAO DATE;
+V_QUANTIDADE_LOCADO NUMBER;
+V_QUANTIDADE_CONJUNTO NUMBER;
+V_QUANTIDADE_CADEIRA NUMBER;
+V_QUANTIDADE_MESA NUMBER;
+CURSOR C1 IS (SELECT NOME_PRODUTO, VALOR_PRODUTO, QUANTIDADE_PRODUTO
+FROM TB_PRODUTOS
+WHERE ID_PRODUTO = P_ID_PRODUTO);
+
+BEGIN
+
+OPEN C1;
+FETCH C1 INTO  V_NOME_PRODUTO, V_VALOR_PRODUTO, V_QUANTIDADE_ESTOQUE;
+CLOSE C1;
+V_VALOR_LOC := V_VALOR_PRODUTO * P_QUANTIDADE_PEDIDO;
+
+SELECT NOME_CLIENTE
+INTO V_NOME_CLIENTE
+FROM TB_CADASTRO_CLIENTES
+WHERE ID_CLIENTE = P_ID_CLIENTE;
+
+SELECT MIN(DATA_DEVOLUCAO)
+INTO V_DATA_DEVOLUCAO
+FROM TB_LOCACAO_PRODUTOS;
+
+SELECT SUM(QUANTIDADE_PEDIDO)
+INTO V_QUANTIDADE_LOCADO
+FROM TB_LOCADOS
+WHERE NOME_PRODUTO = V_NOME_PRODUTO;
+
+SELECT QUANTIDADE_PRODUTO
+INTO V_QUANTIDADE_CONJUNTO
+FROM TB_PRODUTOS
+WHERE ID_PRODUTO = 3;
+
+SELECT QUANTIDADE_PRODUTO
+INTO V_QUANTIDADE_CADEIRA
+FROM TB_PRODUTOS
+WHERE ID_PRODUTO = 2;
+
+SELECT QUANTIDADE_PRODUTO
+INTO V_QUANTIDADE_MESA
+FROM TB_PRODUTOS
+WHERE ID_PRODUTO = 1;
+
+IF  V_QUANTIDADE_ESTOQUE >= P_QUANTIDADE_PEDIDO THEN
+    IF P_ID_PRODUTO = 1 THEN
+        INSERT INTO TB_LOCACAO_PRODUTOS VALUES((SELECT NVL(MAX(ID_LOC), 0) +1 FROM TB_LOCACAO_PRODUTOS),
+                                               P_ID_PRODUTO,
+                                               V_NOME_PRODUTO,
+                                               P_QUANTIDADE_PEDIDO,
+                                               V_VALOR_LOC,
+                                               P_ID_CLIENTE,
+                                               V_NOME_CLIENTE,
+                                               P_DATA_AGENDA,
+                                               P_DATA_LOC,
+                                               P_DATA_DEVOLUCAO
+                                               );                                       
+        UPDATE TB_PRODUTOS
+        SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO
+        WHERE ID_PRODUTO = P_ID_PRODUTO;
+
+        IF  V_QUANTIDADE_MESA - P_QUANTIDADE_PEDIDO < V_QUANTIDADE_CONJUNTO THEN
+            UPDATE TB_PRODUTOS
+            SET QUANTIDADE_PRODUTO = V_QUANTIDADE_MESA - P_QUANTIDADE_PEDIDO
+            WHERE ID_PRODUTO = 3;
+        END IF;
+    ELSIF P_ID_PRODUTO = 2 AND V_QUANTIDADE_ESTOQUE - P_QUANTIDADE_PEDIDO >= V_QUANTIDADE_CONJUNTO * 4 THEN
+        INSERT INTO TB_LOCACAO_PRODUTOS VALUES((SELECT NVL(MAX(ID_LOC), 0) +1 FROM TB_LOCACAO_PRODUTOS),
+                                               P_ID_PRODUTO,
+                                               V_NOME_PRODUTO,
+                                               P_QUANTIDADE_PEDIDO,
+                                               V_VALOR_LOC,
+                                               P_ID_CLIENTE,
+                                               V_NOME_CLIENTE,
+                                               P_DATA_AGENDA,
+                                               P_DATA_LOC,
+                                               P_DATA_DEVOLUCAO
+                                               );                                       
+        UPDATE TB_PRODUTOS
+        SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO
+        WHERE ID_PRODUTO = P_ID_PRODUTO;
+
+
+    ELSIF P_ID_PRODUTO = 2  AND  V_QUANTIDADE_ESTOQUE - P_QUANTIDADE_PEDIDO < V_QUANTIDADE_CONJUNTO * 4 THEN
+
+        INSERT INTO TB_LOCACAO_PRODUTOS VALUES((SELECT NVL(MAX(ID_LOC), 0) +1 FROM TB_LOCACAO_PRODUTOS),
+                                               P_ID_PRODUTO,
+                                               V_NOME_PRODUTO,
+                                               P_QUANTIDADE_PEDIDO,
+                                               V_VALOR_LOC,
+                                               P_ID_CLIENTE,
+                                               V_NOME_CLIENTE,
+                                               P_DATA_AGENDA,
+                                               P_DATA_LOC,
+                                               P_DATA_DEVOLUCAO
+                                               );                                       
+
+        UPDATE TB_PRODUTOS
+        SET QUANTIDADE_PRODUTO = TRUNC((V_QUANTIDADE_ESTOQUE - P_QUANTIDADE_PEDIDO) / 4)
+        WHERE ID_PRODUTO = 3;
+
+        UPDATE TB_PRODUTOS
+        SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO
+        WHERE ID_PRODUTO = P_ID_PRODUTO;
+
+
+
+    ELSIF P_ID_PRODUTO = 3 THEN
+        INSERT INTO TB_LOCACAO_PRODUTOS VALUES((SELECT NVL(MAX(ID_LOC), 0) +1 FROM TB_LOCACAO_PRODUTOS),
+                                               P_ID_PRODUTO,
+                                               V_NOME_PRODUTO,
+                                               P_QUANTIDADE_PEDIDO,
+                                               V_VALOR_LOC,
+                                               P_ID_CLIENTE,
+                                               V_NOME_CLIENTE,
+                                               P_DATA_AGENDA,
+                                               P_DATA_LOC,
+                                               P_DATA_DEVOLUCAO
+                                               );                                       
+        UPDATE TB_PRODUTOS
+        SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO
+        WHERE ID_PRODUTO = P_ID_PRODUTO;
+
+        UPDATE TB_PRODUTOS
+        SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO
+        WHERE ID_PRODUTO = 1;
+
+        UPDATE TB_PRODUTOS
+        SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO * 4
+        WHERE ID_PRODUTO = 2;
+
+    ELSE
+        INSERT INTO TB_LOCACAO_PRODUTOS VALUES((SELECT NVL(MAX(ID_LOC), 0) +1 FROM TB_LOCACAO_PRODUTOS),
+                                               P_ID_PRODUTO,
+                                               V_NOME_PRODUTO,
+                                               P_QUANTIDADE_PEDIDO,
+                                               V_VALOR_LOC,
+                                               P_ID_CLIENTE,
+                                               V_NOME_CLIENTE,
+                                               P_DATA_AGENDA,
+                                               P_DATA_LOC,
+                                               P_DATA_DEVOLUCAO
+                                               );                                       
+        UPDATE TB_PRODUTOS
+        SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO
+        WHERE ID_PRODUTO = P_ID_PRODUTO;
+
+    END IF;
+
+ELSIF V_QUANTIDADE_ESTOQUE < P_QUANTIDADE_PEDIDO THEN
+    IF P_DATA_LOC < V_DATA_DEVOLUCAO THEN
+        DBMS_OUTPUT.PUT_LINE('SÓ TEMOS '||V_QUANTIDADE_ESTOQUE||' NO ESTOQUE');
+    ELSIF P_DATA_LOC > V_DATA_DEVOLUCAO AND V_QUANTIDADE_ESTOQUE + V_QUANTIDADE_LOCADO >= P_QUANTIDADE_PEDIDO THEN
+        IF P_ID_PRODUTO = 1 THEN
+            INSERT INTO TB_LOCACAO_PRODUTOS VALUES((SELECT NVL(MAX(ID_LOC), 0) +1 FROM TB_LOCACAO_PRODUTOS),
+                                               P_ID_PRODUTO,
+                                               V_NOME_PRODUTO,
+                                               P_QUANTIDADE_PEDIDO,
+                                               V_VALOR_LOC,
+                                               P_ID_CLIENTE,
+                                               V_NOME_CLIENTE,
+                                               P_DATA_AGENDA,
+                                               P_DATA_LOC,
+                                               P_DATA_DEVOLUCAO
+                                               );                                       
+            UPDATE TB_PRODUTOS
+            SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO
+            WHERE ID_PRODUTO = P_ID_PRODUTO;
+
+        ELSIF P_ID_PRODUTO = 2 THEN
+            INSERT INTO TB_LOCACAO_PRODUTOS VALUES((SELECT NVL(MAX(ID_LOC), 0) +1 FROM TB_LOCACAO_PRODUTOS),
+                                               P_ID_PRODUTO,
+                                               V_NOME_PRODUTO,
+                                               P_QUANTIDADE_PEDIDO,
+                                               V_VALOR_LOC,
+                                               P_ID_CLIENTE,
+                                               V_NOME_CLIENTE,
+                                               P_DATA_AGENDA,
+                                               P_DATA_LOC,
+                                               P_DATA_DEVOLUCAO
+                                               );                                       
+            UPDATE TB_PRODUTOS
+            SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO
+            WHERE ID_PRODUTO = P_ID_PRODUTO;
+
+        ELSIF P_ID_PRODUTO = 3 THEN
+            INSERT INTO TB_LOCACAO_PRODUTOS VALUES((SELECT NVL(MAX(ID_LOC), 0) +1 FROM TB_LOCACAO_PRODUTOS),
+                                               P_ID_PRODUTO,
+                                               V_NOME_PRODUTO,
+                                               P_QUANTIDADE_PEDIDO,
+                                               V_VALOR_LOC,
+                                               P_ID_CLIENTE,
+                                               V_NOME_CLIENTE,
+                                               P_DATA_AGENDA,
+                                               P_DATA_LOC,
+                                               P_DATA_DEVOLUCAO
+                                               );                                       
+            UPDATE TB_PRODUTOS
+            SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO
+            WHERE ID_PRODUTO = P_ID_PRODUTO;
+
+            UPDATE TB_PRODUTOS
+            SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO
+            WHERE ID_PRODUTO = 1;
+
+            UPDATE TB_PRODUTOS
+            SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO * 4
+            WHERE ID_PRODUTO = 2;
+
+    ELSE
+        INSERT INTO TB_LOCACAO_PRODUTOS VALUES((SELECT NVL(MAX(ID_LOC), 0) +1 FROM TB_LOCACAO_PRODUTOS),
+                                               P_ID_PRODUTO,
+                                               V_NOME_PRODUTO,
+                                               P_QUANTIDADE_PEDIDO,
+                                               V_VALOR_LOC,
+                                               P_ID_CLIENTE,
+                                               V_NOME_CLIENTE,
+                                               P_DATA_AGENDA,
+                                               P_DATA_LOC,
+                                               P_DATA_DEVOLUCAO
+                                               );                                       
+        UPDATE TB_PRODUTOS
+        SET QUANTIDADE_PRODUTO = QUANTIDADE_PRODUTO - P_QUANTIDADE_PEDIDO
+        WHERE ID_PRODUTO = P_ID_PRODUTO;
+
+        END IF;
+    ELSIF P_DATA_LOC > V_DATA_DEVOLUCAO AND V_QUANTIDADE_ESTOQUE + V_QUANTIDADE_LOCADO < P_QUANTIDADE_PEDIDO THEN
+        DBMS_OUTPUT.PUT_LINE('PARA ESSA DATA TEREMOS SOMENTE '||V_QUANTIDADE_ESTOQUE + V_QUANTIDADE_LOCADO||' PRODUTOS');
+    END IF;
+END IF;
+END;
